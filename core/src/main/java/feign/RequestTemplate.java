@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 import static feign.Util.*;
 
 /**
+ * Request 模板，用来构建 Request 对象，然后交给 HTTP 客户端执行 HTTP 请求
+ * <p>
+ *
  * Request Builder for an HTTP Target.
  * <p>
  * This class is a variation on a UriTemplate, where, in addition to the uri, Headers and Query
@@ -60,6 +63,9 @@ public final class RequestTemplate implements Serializable {
   }
 
   /**
+   * HTTP 请求模板，方便构建 HTTP 请求
+   * <p>
+   *
    * Create a new Request Template.
    *
    * @param fragment part of the request uri.
@@ -166,8 +172,6 @@ public final class RequestTemplate implements Serializable {
    */
   public RequestTemplate resolve(Map<String, ?> variables) {
 
-    StringBuilder uri = new StringBuilder();
-
     /* create a new template form this one, but explicitly */
     RequestTemplate resolved = RequestTemplate.from(this);
 
@@ -176,12 +180,16 @@ public final class RequestTemplate implements Serializable {
       this.uriTemplate = UriTemplate.create("", !this.decodeSlash, this.charset);
     }
 
+    // 构建 uri
+    StringBuilder uri = new StringBuilder();
+
     String expanded = this.uriTemplate.expand(variables);
     if (expanded != null) {
       uri.append(expanded);
     }
 
     /*
+     * 将 get 参数追加到 uri 后面
      * for simplicity, combine the queries into the uri and use the resulting uri to seed the
      * resolved template.
      */
@@ -193,6 +201,7 @@ public final class RequestTemplate implements Serializable {
       StringBuilder query = new StringBuilder();
       Iterator<QueryTemplate> queryTemplates = this.queries.values().iterator();
 
+      // 根据参数构建出 queryString
       while (queryTemplates.hasNext()) {
         QueryTemplate queryTemplate = queryTemplates.next();
         String queryExpanded = queryTemplate.expand(variables);
@@ -204,6 +213,7 @@ public final class RequestTemplate implements Serializable {
         }
       }
 
+      // 将queryString 追加到 uri 后面
       String queryString = query.toString();
       if (!queryString.isEmpty()) {
         Matcher queryMatcher = QUERY_STRING_PATTERN.matcher(uri);
@@ -217,9 +227,11 @@ public final class RequestTemplate implements Serializable {
       }
     }
 
+    // 填充 uri
     /* add the uri to result */
     resolved.uri(uri.toString());
 
+    // 填充 header
     /* headers */
     if (!this.headers.isEmpty()) {
       /*
@@ -237,10 +249,12 @@ public final class RequestTemplate implements Serializable {
       }
     }
 
+    // 填充 body
     if (this.bodyTemplate != null) {
       resolved.body(this.bodyTemplate.expand(variables));
     }
 
+    // 标记 RequestTemplate 解析完成
     /* mark the new template resolved */
     resolved.resolved = true;
     return resolved;

@@ -23,6 +23,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
+ * 接口中 default 类型方法的处理器。
+ * 其实啥也没干，就是把接口上的 default 方法绑定到了代理对象上，让代理对象直接执行，也就是说 default 类型的方法不会被 Feign 处理
+ * <p>
+ *
  * Handles default methods by directly invoking the default method code on the interface. The bindTo
  * method must be called on the result before invoke is called.
  */

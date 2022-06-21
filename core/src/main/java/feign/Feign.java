@@ -30,6 +30,9 @@ import java.util.stream.Collectors;
 import static feign.ExceptionPropagationPolicy.NONE;
 
 /**
+ * Feign 抽象类，用来提供创建 feignClient 的基本方法和操作。
+ * <p>
+ *
  * Feign's purpose is to ease development against http apis that feign restfulness. <br>
  * In implementation, Feign is a {@link Feign#newInstance factory} for generating {@link Target
  * targeted} http apis.
@@ -89,15 +92,23 @@ public abstract class Feign {
   }
 
   /**
+   * 创建接口的代理对象
+   * <p>
+   *
    * Returns a new instance of an HTTP API, defined by annotations in the {@link Feign Contract},
    * for the specified {@code target}. You should cache this result.
    */
   public abstract <T> T newInstance(Target<T> target);
 
+  /**
+   * Feign 的构造器，提供构造 feign 对象的方法。
+   * 在 spring-cloud-openfeign 中有它的子类
+   */
   public static class Builder {
 
-    private final List<RequestInterceptor> requestInterceptors =
-        new ArrayList<RequestInterceptor>();
+    // =================== 构造 feign 对象时需要用到的一些属性 ========================
+
+    private final List<RequestInterceptor> requestInterceptors = new ArrayList<RequestInterceptor>();
     private Logger.Level logLevel = Logger.Level.NONE;
     private Contract contract = new Contract.Default();
     private Client client = new Client.Default(null, null);
@@ -115,6 +126,8 @@ public abstract class Feign {
     private ExceptionPropagationPolicy propagationPolicy = NONE;
     private boolean forceDecoding = false;
     private List<Capability> capabilities = new ArrayList<>();
+
+    // ====================== 以下是上述属性的链式设置方法 ===================
 
     public Builder logLevel(Logger.Level logLevel) {
       this.logLevel = logLevel;
@@ -283,6 +296,10 @@ public abstract class Feign {
       return this;
     }
 
+    // ====================== 以上是一些属性的链式设置方法 ===================
+
+    // target() 方法用于生成接口的代理对象
+
     public <T> T target(Class<T> apiType, String url) {
       return target(new HardCodedTarget<T>(apiType, url));
     }
@@ -291,7 +308,12 @@ public abstract class Feign {
       return build().newInstance(target);
     }
 
+
+    /**
+     * 构建一个 Feign 对象
+     */
     public Feign build() {
+      // 根据 capabilities 给各个属性进行增强
       Client client = Capability.enrich(this.client, capabilities);
       Retryer retryer = Capability.enrich(this.retryer, capabilities);
       List<RequestInterceptor> requestInterceptors = this.requestInterceptors.stream()
@@ -306,12 +328,17 @@ public abstract class Feign {
           Capability.enrich(this.invocationHandlerFactory, capabilities);
       QueryMapEncoder queryMapEncoder = Capability.enrich(this.queryMapEncoder, capabilities);
 
-      SynchronousMethodHandler.Factory synchronousMethodHandlerFactory =
-          new SynchronousMethodHandler.Factory(client, retryer, requestInterceptors, logger,
-              logLevel, dismiss404, closeAfterDecode, propagationPolicy, forceDecoding);
-      ParseHandlersByName handlersByName =
-          new ParseHandlersByName(contract, options, encoder, decoder, queryMapEncoder,
-              errorDecoder, synchronousMethodHandlerFactory);
+      // 创建代理方法工厂，用于创建代理方法
+      SynchronousMethodHandler.Factory synchronousMethodHandlerFactory = new SynchronousMethodHandler.Factory(
+              client, retryer, requestInterceptors, logger,
+              logLevel, dismiss404, closeAfterDecode, propagationPolicy, forceDecoding
+      );
+      // 创建 MethodHandler 解析器，会调用 synchronousMethodHandlerFactory 创建代理方法，并生成原方法与代理方法的映射关系
+      ParseHandlersByName handlersByName = new ParseHandlersByName(
+              contract, options, encoder, decoder, queryMapEncoder, errorDecoder, synchronousMethodHandlerFactory
+      );
+
+      // 创建 ReflectiveFeign 对象，是 Feign 的子类
       return new ReflectiveFeign(handlersByName, invocationHandlerFactory, queryMapEncoder);
     }
   }
