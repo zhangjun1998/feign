@@ -18,6 +18,9 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 /**
+ * 调用处理器工厂，可以生成调用处理器，用来控制代理对象反射方法的调用分发
+ * <p>
+ *
  * Controls reflective method dispatch.
  */
 public interface InvocationHandlerFactory {
@@ -25,6 +28,10 @@ public interface InvocationHandlerFactory {
   InvocationHandler create(Target target, Map<Method, MethodHandler> dispatch);
 
   /**
+   * 方法处理器
+   * 在调用代理对象的方法时会被 InvocationHandler 拦截，然后根据方法名分发到对应的方法处理器中进行处理
+   * <p>
+   *
    * Like {@link InvocationHandler#invoke(Object, java.lang.reflect.Method, Object[])}, except for a
    * single method.
    */

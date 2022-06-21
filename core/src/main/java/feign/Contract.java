@@ -32,6 +32,8 @@ import static feign.Util.checkState;
 import static feign.Util.emptyToNull;
 
 /**
+ * 定义接口上的注解和值的解析接口，使用者可以通过实现该接口来自定义一些注解的处理逻辑
+ *
  * Defines what annotations and values are valid on interfaces.
  */
 public interface Contract {
@@ -55,14 +57,23 @@ public interface Contract {
           targetType.getSimpleName());
       checkState(targetType.getInterfaces().length <= 1, "Only single inheritance supported: %s",
           targetType.getSimpleName());
+
       final Map<String, MethodMetadata> result = new LinkedHashMap<String, MethodMetadata>();
+
+      // 遍历接口方法
       for (final Method method : targetType.getMethods()) {
+        // 返回类型为 Object的，是静态方法的、是 default 类型的，不做处理
         if (method.getDeclaringClass() == Object.class ||
             (method.getModifiers() & Modifier.STATIC) != 0 ||
             Util.isDefault(method)) {
           continue;
         }
+
+        // 解析出方法的元数据，SpringMvcContract 就是在这里进行扩展的
         final MethodMetadata metadata = parseAndValidateMetadata(targetType, method);
+
+        // configKey 的格式为 接口名#方法名([参数类型 ...])
+        // 什么情况下会重复呢？
         if (result.containsKey(metadata.configKey())) {
           MethodMetadata existingMetadata = result.get(metadata.configKey());
           Type existingReturnType = existingMetadata.returnType();
@@ -73,8 +84,12 @@ public interface Contract {
           }
           continue;
         }
+
+        // 将方法的元数据放到 map
         result.put(metadata.configKey(), metadata);
       }
+
+      // 返回所有方法的元数据信息
       return new ArrayList<>(result.values());
     }
 
@@ -87,6 +102,9 @@ public interface Contract {
     }
 
     /**
+     * 处理并校验注解的元数据
+     * <p>
+     *
      * Called indirectly by {@link #parseAndValidateMetadata(Class)}.
      */
     protected MethodMetadata parseAndValidateMetadata(Class<?> targetType, Method method) {
@@ -105,7 +123,7 @@ public interface Contract {
       }
       processAnnotationOnClass(data, targetType);
 
-
+      // spring 在 SpringMvcContract 中重写了 processAnnotationOnMethod 方法来处理 MVC 注解
       for (final Annotation methodAnnotation : method.getAnnotations()) {
         processAnnotationOnMethod(data, methodAnnotation, method);
       }
@@ -208,6 +226,9 @@ public interface Contract {
     protected abstract void processAnnotationOnClass(MethodMetadata data, Class<?> clz);
 
     /**
+     * 处理方法上的注解。
+     * spring 在这里重写方法来处理 MVC 注解。
+     *
      * @param data metadata collected so far relating to the current java method.
      * @param annotation annotations present on the current method annotation.
      * @param method method currently being processed.

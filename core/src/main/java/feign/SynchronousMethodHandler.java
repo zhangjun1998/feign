@@ -27,6 +27,13 @@ import static feign.ExceptionPropagationPolicy.UNWRAP;
 import static feign.FeignException.errorExecuting;
 import static feign.Util.checkNotNull;
 
+/**
+ * 方法处理器的实现类
+ * 除了 default 类型的方法和需要被忽略的方法，接口中其它方法的处理器默认都是这个，该处理器是同步执行的
+ *
+ * @author ZhangJun
+ * @create 2022/6/18 18:01
+ */
 final class SynchronousMethodHandler implements MethodHandler {
 
   private static final long MAX_RESPONSE_BUFFER_SIZE = 8192L;
@@ -47,6 +54,9 @@ final class SynchronousMethodHandler implements MethodHandler {
   private final AsyncResponseHandler asyncResponseHandler;
 
 
+  /**
+   * 构造函数，填充各种属性
+   */
   private SynchronousMethodHandler(Target<?> target, Client client, Retryer retryer,
       List<RequestInterceptor> requestInterceptors, Logger logger,
       Logger.Level logLevel, MethodMetadata metadata,
@@ -79,15 +89,24 @@ final class SynchronousMethodHandler implements MethodHandler {
     }
   }
 
+  /**
+   * 代理对象调用任意方法时被 InvocationHandlerFactory 拦截并分发到了这个处理器执行
+   */
   @Override
   public Object invoke(Object[] argv) throws Throwable {
+    // 创建 RequestTemplate
     RequestTemplate template = buildTemplateFromArgs.create(argv);
+
+    // FeignClient 的 Options 配置和 Retryer 配置，一些超时、重试等配置
     Options options = findOptions(argv);
     Retryer retryer = this.retryer.clone();
+
+    // 执行 HTTP 请求
     while (true) {
       try {
+        // 执行请求并返回解码后的响应
         return executeAndDecode(template, options);
-      } catch (RetryableException e) {
+      } catch (RetryableException e) { // 重试异常，进行重试
         try {
           retryer.continueOrPropagate(e);
         } catch (RetryableException th) {
@@ -103,10 +122,15 @@ final class SynchronousMethodHandler implements MethodHandler {
         }
         continue;
       }
+      // 其它异常直接抛出，退出方法
     }
   }
 
+  /**
+   * 执行 HTTP 请求并返回解码后的响应
+   */
   Object executeAndDecode(RequestTemplate template, Options options) throws Throwable {
+    // 执行请求的前置拦截器，并将 RequestTemplate 转换为 Request
     Request request = targetRequest(template);
 
     if (logLevel != Logger.Level.NONE) {
@@ -116,6 +140,7 @@ final class SynchronousMethodHandler implements MethodHandler {
     Response response;
     long start = System.nanoTime();
     try {
+      // 将请求交给 HTTP 客户端执行并返回响应
       response = client.execute(request, options);
       // ensure the request is set. TODO: remove in Feign 12
       response = response.toBuilder()
@@ -128,16 +153,18 @@ final class SynchronousMethodHandler implements MethodHandler {
       }
       throw errorExecuting(request, e);
     }
+
+    // 统计请求耗时
     long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
-
-    if (decoder != null)
+    // 解码响应并返回结果
+    if (decoder != null) {
       return decoder.decode(response, metadata.returnType());
+    }
 
+    // 下面在干啥，异步？
     CompletableFuture<Object> resultFuture = new CompletableFuture<>();
-    asyncResponseHandler.handleResponse(resultFuture, metadata.configKey(), response,
-        metadata.returnType(),
-        elapsedTime);
+    asyncResponseHandler.handleResponse(resultFuture, metadata.configKey(), response, metadata.returnType(), elapsedTime);
 
     try {
       if (!resultFuture.isDone())
@@ -156,6 +183,9 @@ final class SynchronousMethodHandler implements MethodHandler {
     return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
   }
 
+  /**
+   * 执行请求前置拦截器，并转换 RequestTemplate 为 Request
+   */
   Request targetRequest(RequestTemplate template) {
     for (RequestInterceptor interceptor : requestInterceptors) {
       interceptor.apply(template);
@@ -186,6 +216,9 @@ final class SynchronousMethodHandler implements MethodHandler {
     private final ExceptionPropagationPolicy propagationPolicy;
     private final boolean forceDecoding;
 
+    /**
+     * SynchronousMethodHandler 工厂类
+     */
     Factory(Client client, Retryer retryer, List<RequestInterceptor> requestInterceptors,
         Logger logger, Logger.Level logLevel, boolean dismiss404, boolean closeAfterDecode,
         ExceptionPropagationPolicy propagationPolicy, boolean forceDecoding) {
