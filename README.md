@@ -20,11 +20,11 @@
 + [x] SynchronousMethodHandler：方法处理器的实现类，默认的方法处理器，该处理器是同步执行的
   + [x] SynchronousMethodHandler.Factory：SynchronousMethodHandler 工厂类
 + [x] RequestTemplate：Request 模板，用来构建 Request 对象，然后交给 HTTP 客户端执行 HTTP 请求
-+ [ ] Client：HTTP 客户端接口，用于规定统一的 HTTP 调用规范，子类实现规范即可介入各 HTTP 客户端实现类
-  + [ ] Default：默认 HTTP 客户端，使用 HttpURLConnection 执行 HTTP 请求
-  + [ ] RibbonClient：Ribbon 客户端，可以支持负载均衡调用，它只对 HTTP 客户端做封装，本身不提供 HTTP 客户端功能，需要注入其它 HTTP 客户端
-+ [ ] Contract：
-+ [x] ...
++ [x] Client：HTTP 客户端接口，用于规定统一的 HTTP 调用规范，子类实现规范即可介入各 HTTP 客户端实现类
+  + [x] Default：默认 HTTP 客户端，使用 HttpURLConnection 执行 HTTP 请求
+  + [x] RibbonClient：Ribbon 客户端，可以支持负载均衡调用，它只对 HTTP 客户端做封装，本身不提供 HTTP 客户端功能，需要注入其它 HTTP 客户端
++ [x] Contract：
++ [ ] ...
 
 
 **联系方式：**
